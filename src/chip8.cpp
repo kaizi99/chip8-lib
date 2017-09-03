@@ -18,7 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "../include/chip8.h"
 #include <string.h>
 
-uint8_t fontset[80] =
+// Sprites for characters 0-9 and A-F
+const uint8_t fontset[80] =
 { 
   0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
   0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -40,22 +41,101 @@ uint8_t fontset[80] =
 
 Chip8::Chip8()
 {
+    // Clear the memory
     memset(&m_memory.memory, 0x00, 4096);
+
+    // Set the program counter
     m_memory.interpreter.pc = 0x200;
+
+    // Copy the fontset into memory
+    memcpy(&m_memory.interpreter.fontset, fontset, sizeof(fontset));
 }
 
 void Chip8::SetRom(std::vector<uint8_t>& rom)
 {
     size_t romSize = rom.size();
+
     // Range check
     if (romSize > 3584)
         return;
 
     // Copy the rom into memory
-    memcpy(&m_memory.interpreter.rom, (void*)rom.data(), romSize);
+    memcpy(&m_memory.interpreter.rom, rom.data(), romSize);
 }
 
 void Chip8::Tick()
 {
+    // Reset the flags
+    m_memory.interpreter.beep = false;
+    m_memory.interpreter.updateDisplay = false;
 
+    // Update the delay timer
+    if (m_memory.interpreter.delayTimer != 0)
+        m_memory.interpreter.delayTimer--;
+
+    // Update the sound timer, if sound timer hits 0, set beep flag
+    if (m_memory.interpreter.soundTimer > 0)
+    {
+        if (m_memory.interpreter.soundTimer == 1)
+            m_memory.interpreter.beep = true;
+        m_memory.interpreter.soundTimer--;
+    }
+
+    // Fetch the opcode from memory
+    m_memory.interpreter.opcode = m_memory.memory[m_memory.interpreter.pc] << 8 | m_memory.memory[m_memory.interpreter.pc + 1];
+
+    // Execute the opcode
+    switch (m_memory.interpreter.opcode & 0xF000)
+    {
+        case 0x0000:
+
+            break;
+        case 0x1000:
+
+            break;
+        case 0x2000:
+            
+            break;
+        case 0x3000:
+
+            break;
+        case 0x4000:
+
+            break;
+        case 0x5000:
+            
+            break;
+        case 0x6000:
+
+            break;
+        case 0x7000:
+
+            break;
+        case 0x8000:
+            
+            break;
+        case 0x9000:
+
+            break;
+        case 0xA000:
+
+            break;
+        case 0xB000:
+            
+            break;
+        case 0xC000:
+
+            break;
+        case 0xD000:
+
+            break;
+        case 0xE000:
+            
+            break;
+        case 0xF000:
+
+            break;
+        default:
+            break;
+    }
 }

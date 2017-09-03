@@ -39,6 +39,11 @@ public:
         return (bool)m_memory.interpreter.beep;
     }
 
+    void SetKeymap(uint16_t keymap)
+    {
+        m_memory.interpreter.keymap = keymap;
+    }
+
 private:
     union
     {
@@ -46,13 +51,15 @@ private:
         struct interpreter{ 
             uint16_t i; // Index register, 2 Bytes
             uint16_t pc; // Program counter, 2 Bytes
+            uint16_t opcode; // Current opcode, 2 Bytes
+            uint16_t keymap; // Keys pressed at the moment, 2 Bytes
             uint16_t stack[16]; // Stack, 32 Bytes
             uint8_t registers[16]; // 0-14 = general purpose registers, 15 = flags, 16 Bytes
             uint8_t soundTimer; // Sound timer, 1 Byte
             uint8_t delayTimer; // Delay timer, 1 Byte
             uint8_t beep; // Should Beep?, 1 Byte
             uint8_t updateDisplay; // Should update display?, 1 Byte
-            uint8_t padding[24]; // Padding so that the fontset gets loaded at 0x50(80), 24 Bytes
+            uint8_t padding[20]; // Padding so that the fontset gets loaded at 0x50(80), 20 Bytes
             uint8_t fontset[80]; // Fontset, 80 Bytes
             uint8_t display[256]; // 64*32 Display, 256 Bytes
             uint8_t padding2[96]; // Padding for the rom
