@@ -88,31 +88,105 @@ void Chip8::Tick()
     switch (m_memory.interpreter.opcode & 0xF000)
     {
         case 0x0000:
+            if (m_memory.interpreter.opcode == 0x00E0) // 00E0: Clear the display
+            {
+                memset(&m_memory.interpreter.display, 0x00, 256);
+                m_memory.interpreter.pc += 2;
+            }
+            if (m_memory.interpreter.opcode == 0x00EE) // 00EE: Return from a subroutine
+                m_memory.interpreter.pc = m_memory.interpreter.stack[m_memory.interpreter.sp--];
+            break;
+        case 0x1000: // 1nnn: Jump to location nnn
+            m_memory.interpreter.pc = m_memory.interpreter.opcode & 0x0FFF;
+            break;
+        case 0x2000: // 2nnn: Call subroutine at nnn
+            m_memory.interpreter.stack[++m_memory.interpreter.sp] = m_memory.interpreter.pc;
+            m_memory.interpreter.pc = m_memory.interpreter.opcode & 0x0FFF;
+            break;
+        case 0x3000: // 3xkk: Skip next instruction if Vx == kk
+            if (m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x0F00 >> 8] == m_memory.interpreter.opcode & 0x00FF)
+                m_memory.interpreter.pc += 4;
+            else
+                m_memory.interpreter.pc += 2;
+            break;
+        case 0x4000: // 4xkk: Skip next instruction if Vx != kk
+            if (m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x0F00 >> 8] != m_memory.interpreter.opcode & 0x00FF)
+                m_memory.interpreter.pc += 4;
+            else
+                m_memory.interpreter.pc += 2;
+            break;
+        case 0x5000: // 5xy0: Skip next instruction if Vx == Vy
+            if (m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x0F00 >> 8] == m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x00F0 >> 4])
+                m_memory.interpreter.pc += 4;
+            else
+                m_memory.interpreter.pc += 2;
+            break;
+        case 0x6000: // 6xkk: Sets Vx = kk
+            m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x0F00 >> 8] = m_memory.interpreter.opcode & 0x00FF;
+            m_memory.interpreter.pc += 2;
+            break;
+        case 0x7000: // 7xkk: Sets Vx = Vx + kk
+            m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x0F00 >> 8] += m_memory.interpreter.opcode & 0x00FF;
+            m_memory.interpreter.pc += 2;
+            break;
+        case 0x8000: 
+            if (m_memory.interpreter.opcode & 0x000F == 0x0000) // 8xy0: Set Vx = Vy
+                m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x0F00 >> 8] = m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x00F0 >> 4];
+            else if(m_memory.interpreter.opcode & 0x000F == 0x0001) // 8xy1: Set Vx = Vx | Vy
+                m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x0F00 >> 8] |= m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x00F0 >> 4];
+            else if(m_memory.interpreter.opcode & 0x000F == 0x0002) // 8xy2: Set Vx = Vx & Vy
+                m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x0F00 >> 8] &= m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x00F0 >> 4];
+            else if(m_memory.interpreter.opcode & 0x000F == 0x0003) // 8xy3: Set Vx = Vx ^ Vy
+                m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x0F00 >> 8] ^= m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x00F0 >> 4];
+            else if(m_memory.interpreter.opcode & 0x000F == 0x0004) // 8xy4: Set Vx = Vx + Vy, set VF = carry
+            {             
+                uint8_t sum, vx, vy;
+                vx = m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x0F00 >> 8];
+                vy = m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x00F0 >> 4];
+                sum = vx + vy;
+                if (sum < vx)
+                    m_memory.interpreter.registers[15] = 1;
+                
+                m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x0F00 >> 8] = sum;
 
-            break;
-        case 0x1000:
+                m_memory.interpreter.pc += 2;
+            }
+            else if(m_memory.interpreter.opcode & 0x000F == 0x0005) // 8xy5: Set Vx = Vx - Vy, set VF = NOT borrow.
+            {
+                uint8_t sum, vx, vy;
+                vx = m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x0F00 >> 8];
+                vy = m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x00F0 >> 4];
+                m_memory.interpreter.registers[15] = vx > vy ? 1 : 0;
+                m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x0F00 >> 8] = vx - vy;
+            }
+            else if(m_memory.interpreter.opcode & 0x000F == 0x0006) // 8xy6: Set Vx = Vx SHR 1.
+            {
+                if (m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x0F00 >> 8] & 0b00000001 == 0x1)
+                    m_memory.interpreter.registers[15] = 1;
+                else
+                    m_memory.interpreter.registers[15] = 0;
 
-            break;
-        case 0x2000:
-            
-            break;
-        case 0x3000:
+                    m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x0F00 >> 8] /= 2;
+            }
+            else if(m_memory.interpreter.opcode & 0x000F == 0x0007) // 8xy7: Set Vx = Vy - Vx, set VF = NOT borrow.
+            {
+                uint8_t sum, vx, vy;
+                vx = m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x0F00 >> 8];
+                vy = m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x00F0 >> 4];
+                m_memory.interpreter.registers[15] = vy > vx ? 1 : 0;
+                m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x0F00 >> 8] = vy - vx;
+            }
+            else if(m_memory.interpreter.opcode & 0x000F == 0x000E) // 8xyE: Set Vx = Vx SHL 1.
+            {
+                if (m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x0F00 >> 8] & 0b10000000 == 0b10000000)
+                    m_memory.interpreter.registers[15] = 1;
+                else
+                    m_memory.interpreter.registers[15] = 0;
 
-            break;
-        case 0x4000:
+                m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x0F00 >> 8] *= 2;
+            }
 
-            break;
-        case 0x5000:
-            
-            break;
-        case 0x6000:
-
-            break;
-        case 0x7000:
-
-            break;
-        case 0x8000:
-            
+            m_memory.interpreter.pc += 2;
             break;
         case 0x9000:
 

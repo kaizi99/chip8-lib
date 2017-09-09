@@ -25,9 +25,14 @@ class Chip8
 {
 public:
     Chip8();
-    void SetRom(std::vector<uint8_t>& rom);
 
+    void SetRom(std::vector<uint8_t>& rom);
     void Tick();
+    
+    uint8_t* GetDisplay()
+    {
+        return m_memory.interpreter.display;
+    }
 
     bool DisplayShouldUpdate()
     {
@@ -54,12 +59,13 @@ private:
             uint16_t opcode; // Current opcode, 2 Bytes
             uint16_t keymap; // Keys pressed at the moment, 2 Bytes
             uint16_t stack[16]; // Stack, 32 Bytes
+            uint16_t sp; // Stack pointer, 2 Bytes
             uint8_t registers[16]; // 0-14 = general purpose registers, 15 = flags, 16 Bytes
             uint8_t soundTimer; // Sound timer, 1 Byte
             uint8_t delayTimer; // Delay timer, 1 Byte
             uint8_t beep; // Should Beep?, 1 Byte
             uint8_t updateDisplay; // Should update display?, 1 Byte
-            uint8_t padding[20]; // Padding so that the fontset gets loaded at 0x50(80), 20 Bytes
+            uint8_t padding[18]; // Padding so that the fontset gets loaded at 0x50(80), 18 Bytes
             uint8_t fontset[80]; // Fontset, 80 Bytes
             uint8_t display[256]; // 64*32 Display, 256 Bytes
             uint8_t padding2[96]; // Padding for the rom
