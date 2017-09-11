@@ -17,6 +17,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "../include/chip8.h"
 #include <string.h>
+#include <cstdlib>
+#include <ctime>
 
 // Sprites for characters 0-9 and A-F
 const uint8_t fontset[80] =
@@ -49,6 +51,9 @@ Chip8::Chip8()
 
     // Copy the fontset into memory
     memcpy(&m_memory.interpreter.fontset, fontset, sizeof(fontset));
+
+    // Initialize random
+    std::srand(std::time(0));
 }
 
 void Chip8::SetRom(std::vector<uint8_t>& rom)
@@ -188,26 +193,53 @@ void Chip8::Tick()
 
             m_memory.interpreter.pc += 2;
             break;
-        case 0x9000:
-
+        case 0x9000: // 9xy0: Skip next instruction if Vx != Vy.
+            if (m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x0F00 >> 8] != m_memory.interpreter.registers[m_memory.interpreter.opcode & 0x00F0 >> 4])
+                m_memory.interpreter.pc += 4;
+            else
+                m_memory.interpreter.pc += 2;
             break;
-        case 0xA000:
-
+        case 0xA000: // Annn: Set I = nnn.
+            m_memory.interpreter.i = m_memory.interpreter.opcode & 0x0FFF;
+            m_memory.interpreter.pc += 2;
             break;
-        case 0xB000:
+        case 0xB000: // Bnnn: Jump to location nnn + V0.
+            m_memory.interpreter.pc = m_memory.interpreter.opcode & 0x0FFF + m_memory.interpreter.registers[0];
+            break;
+        case 0xC000: // Cxkk: Set Vx = random byte AND kk.
+            // As we do not need serious random generation we can just use the normal std::rand() function
+            m_memory.interpreter.registers[m_memory.interpreter.opcode & 0X0F00 >> 8] = std::rand() % 256 & m_memory.interpreter.opcode & 0X00FF;   
+            m_memory.interpreter.pc += 2;
+            break;
+        case 0xD000: // Dxyn: Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
             
             break;
-        case 0xC000:
-
-            break;
-        case 0xD000:
-
-            break;
-        case 0xE000:
-            
+        case 0xE000: 
+            if (m_memory.interpreter.opcode & 0x00FF == 0x009E) // Ex9E: Skip next instruction if key with the value of Vx is pressed.
+            {
+                if (m_memory.interpreter.keymap & (0x01 << (m_memory.interpreter.opcode & 0x0F00 >> 8)) != 0x00) 
+                    m_memory.interpreter.pc += 4;
+                else 
+                   m_memory.interpreter.pc += 2;
+            }
+            else if (m_memory.interpreter.opcode & 0x00FF == 0x009E) // ExA1: Skip next instruction if key with the value of Vx is not pressed.
+            {
+                if (m_memory.interpreter.keymap & (0x01 << (m_memory.interpreter.opcode & 0x0F00 >> 8)) == 0x00) 
+                    m_memory.interpreter.pc += 4;
+                else 
+                    m_memory.interpreter.pc += 2;
+            }
             break;
         case 0xF000:
-
+            if (m_memory.interpreter.opcode & 0x00FF == 0x07) // Fx07: Set Vx = delay timer value.
+            {
+                m_memory.interpreter.delayTimer = m_memory.interpreter.opcode & 0x0F00 >> 8;
+                m_memory.interpreter.pc += 2;
+            }
+            if (m_memory.interpreter.opcode & 0x00FF == 0x0A) // Fx0A: Wait for a key press, store the value of the key in Vx.
+            {
+                    
+            }
             break;
         default:
             break;
